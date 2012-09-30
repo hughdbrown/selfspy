@@ -13,11 +13,13 @@ SKIP_SET = {'Shift_L', 'Shift_R'}
 
 #Mouse buttons: left button: 1, middle: 2, right: 3, scroll up: 4, down:5
 
+
 class KeyPress:
     def __init__(self, key, time, is_repeat):
         self.key = key
         self.time = time
         self.is_repeat = is_repeat
+
 
 class ActivityStore:
     def __init__(self, db_name, encrypter=None, store_text=True):
@@ -37,7 +39,7 @@ class ActivityStore:
         self.curtext = u""
         self.key_presses = []
         self.last_key_time = time.time()
-        
+
         self.started = NOW()
         self.cur_class = None
         self.cur_window = None
@@ -95,7 +97,7 @@ class ActivityStore:
     def store_keys(self):
         if self.key_presses:
             self.maybe_end_specials()
-            
+
             keys = [press.key for press in self.key_presses]
             timings = [press.time for press in self.key_presses]
 
@@ -104,7 +106,7 @@ class ActivityStore:
             if not self.store_text:
                 keys = []
                 self.curtext = u""
-            
+
             self.session.add(Keys(self.curtext.encode('utf8'), keys, timings, nrkeys, self.started, self.cur_win_proc, self.cur_win_id, self.cur_geo_id))
 
             self.trycommit()
@@ -124,7 +126,7 @@ class ActivityStore:
                 while cur_class is None and cur_class is None:
                     if type(cur_window) is int:
                         return None, None, None
-            
+
                     cur_name = cur_window.get_wm_name()
                     cur_class = cur_window.get_wm_class()
                     if cur_class is None:
@@ -137,7 +139,6 @@ class ActivityStore:
                 continue
             break
         return cur_class[1], cur_window, cur_name
-        
 
     def check_geometry(self):
         i = 0
@@ -149,7 +150,7 @@ class ActivityStore:
                 i += 1
                 if i >= 10:
                     return
-            
+
         cur_geo = self.session.query(Geometry).filter_by(xpos=geo.x, ypos=geo.y, width=geo.width, height=geo.height).scalar()
         if cur_geo is None:
             cur_geo = Geometry(geo)
@@ -159,7 +160,8 @@ class ActivityStore:
 
     def log_cur_window(self):
         cur_class, cur_window, cur_name = self.get_cur_window()
-        if cur_class is None: return
+        if cur_class is None:
+            return
 
         self.session = self.session_maker()
 
@@ -171,9 +173,8 @@ class ActivityStore:
                 cur_process = Process(proc_name)
                 self.session.add(cur_process)
                 self.trycommit()
-            
+
             self.cur_process_id = cur_process.id
-            
 
         if cur_window != self.cur_window or cur_name != self.cur_name:
             self.cur_window = cur_window
@@ -206,14 +207,10 @@ class ActivityStore:
     def got_mouse_click(self, button, press):
         self.log_cur_window()
         self.store_click(button, press)
-        if not (press or button in [4,5]):
+        if not (press or button in [4, 5]):
             self.store_keys()
 
     def got_mouse_move(self, x, y):
         self.nrmoves += 1
         self.latestx = x
         self.latesty = y
-
-
-
-

@@ -2,7 +2,6 @@
 
 import os
 import sys
-import time
 
 import argparse
 import ConfigParser
@@ -10,8 +9,6 @@ import ConfigParser
 import daemon
 import lockfile
 import signal
-import grp
-import pwd
 
 import hashlib
 from Crypto.Cipher import Blowfish
@@ -37,6 +34,7 @@ DATA_DIR = '~/.selfspy'
 DBNAME = 'selfspy.sqlite'
 LOCK_FILE = 'selfspy.pid'
 
+
 def parse_config():
     conf_parser = argparse.ArgumentParser(description=__doc__, add_help=False,
                                           formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -59,6 +57,7 @@ def parse_config():
 
     return parser.parse_args()
 
+
 def make_encrypter(password):
     if password == "":
         encrypter = None
@@ -73,7 +72,7 @@ if __name__ == '__main__':
 
     def check_with_encrypter(password):
         encrypter = make_encrypter(password)
-        return check_password.check(args['data_dir'], encrypter) 
+        return check_password.check(args['data_dir'], encrypter)
 
     try:
         os.makedirs(args['data_dir'])
@@ -99,7 +98,6 @@ if __name__ == '__main__':
         signal.SIGHUP: 'terminate'
     }
 
-
     if args['no_text']:
         args['password'] = ""
 
@@ -112,9 +110,9 @@ if __name__ == '__main__':
         print 'Password failed'
         sys.exit(1)
 
-    with context:    
+    with context:
         astore = ActivityStore(os.path.join(args['data_dir'], DBNAME), encrypter, store_text=(not args['no_text']))
-                        
+
         try:
             astore.run()
         except SystemExit:

@@ -27,18 +27,18 @@ import models
 """
 
 ACTIVE_SECONDS = 180
-PERIOD_LOOKUP = {'s' : 'seconds', 'm' : 'minutes', 'h' : 'hours', 'd' : 'days', 'w' : 'weeks'}
+PERIOD_LOOKUP = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 ACTIVITY_ACTIONS = {'active', 'periods', 'pactive', 'tactive', 'ratios'}
 SUMMARY_ACTIONS = ACTIVITY_ACTIONS.union({'pkeys', 'tkeys', 'key_freqs', 'clicks', 'ratios'})
 
 PROCESS_ACTIONS = {'pkeys', 'pactive'}
 WINDOW_ACTIONS = {'tkeys', 'tactive'}
 
-BUTTON_MAP = [('button1','left'), ('button2','middle'), ('button3','right'), ('button4','up'), ('button5','down')]
+BUTTON_MAP = [('button1', 'left'), ('button2', 'middle'), ('button3', 'right'), ('button4', 'up'), ('button5', 'down')]
+
 
 def pretty_seconds(secs):
     secs = int(secs)
-    starts = secs
     active = False
     outs = ''
     days = secs / (3600 * 24)
@@ -54,7 +54,6 @@ def pretty_seconds(secs):
         outs += '%dh ' % hours
     secs -= hours * 3600
 
-    
     minutes = secs / 60
     if minutes:
         active = True
@@ -63,15 +62,16 @@ def pretty_seconds(secs):
     secs -= minutes * 60
 
     outs += '%ds' % secs
-        
+
     return outs
-    
+
 
 def make_time_string(dates, clock):
     now = datetime.datetime.now()
     now2 = datetime.datetime.now()
 
-    if dates is None: dates = []
+    if dates is None:
+        dates = []
 
     if len(dates) > 3:
         print 'Max three arguments to date', dates
@@ -79,14 +79,17 @@ def make_time_string(dates, clock):
 
     try:
         dates = [int(d) for d in dates]
-        if len(dates) == 3: now = now.replace(year=dates[0])
-        if len(dates) >= 2: now = now.replace(month=dates[-2])
-        if len(dates) >= 1: now = now.replace(day=dates[-1])
+        if len(dates) == 3:
+            now = now.replace(year=dates[0])
+        if len(dates) >= 2:
+            now = now.replace(month=dates[-2])
+        if len(dates) >= 1:
+            now = now.replace(day=dates[-1])
 
         if len(dates) == 2:
             if now > now2:
                 now = now.replace(year=now.year - 1)
-    
+
         if len(dates) == 1:
             if now > now2:
                 m = now.month - 1
@@ -104,13 +107,14 @@ def make_time_string(dates, clock):
         except ValueError:
             print 'Malformed clock', clock
             sys.exit(1)
-        
+
         now = now.replace(hour=hour, minute=minute, second=0)
 
         if now > now2:
             now -= datetime.timedelta(days=1)
 
     return now.strftime('%Y-%m-%d %H:%M'), now
+
 
 def make_period(q, period, who, start, prop):
     if len(period) < 1 or len(period) > 2:
@@ -126,7 +130,7 @@ def make_period(q, period, who, start, prop):
             print '--limit unit "%s" not one of %s' % (period[1], PERIOD_LOOKUP.keys())
             sys.exit(1)
         d[PERIOD_LOOKUP[period[1]]] = val
-    
+
     if start:
         return q.filter(prop <= start + datetime.timedelta(**d))
     else:
@@ -137,10 +141,11 @@ def make_period(q, period, who, start, prop):
 def create_times(row):
     current_time = time.mktime(row.created_at.timetuple())
     abs_times = [current_time]
-    for t in row.timings:
+    for _ in row.timings:
         current_time += 1
         abs_times.append(current_time)
     return abs_times
+
 
 class Selfstats:
     def __init__(self, db_name, args):
@@ -149,7 +154,7 @@ class Selfstats:
         self.inmouse = False
 
         self.check_needs()
-    
+
     def do(self):
         if self.need_summary:
             self.calc_summary()
@@ -166,8 +171,10 @@ class Selfstats:
         self.need_process = any(self.args[k] for k in PROCESS_ACTIONS)
         self.need_window = any(self.args[k] for k in WINDOW_ACTIONS)
 
-        if self.args['body'] is not None: self.need_text = True
-        if self.args['showtext']: self.need_text = True
+        if self.args['body'] is not None:
+            self.need_text = True
+        if self.args['showtext']:
+            self.need_text = True
         cutoff = [self.args[k] for k in ACTIVITY_ACTIONS if self.args[k]]
         if cutoff:
             if any(c != cutoff[0] for c in cutoff):
@@ -175,9 +182,11 @@ class Selfstats:
                 sys.exit(1)
             self.need_activity = cutoff[0]
             self.need_timings = True
-        if self.args['key_freqs']: self.need_keys = True
+        if self.args['key_freqs']:
+            self.need_keys = True
 
-        if any(self.args[k] for k in SUMMARY_ACTIONS): self.need_summary = True
+        if any(self.args[k] for k in SUMMARY_ACTIONS):
+            self.need_summary = True
 
     def maybe_reg_filter(self, q, name, names, table, source_prop, target_prop):
         if self.args[name] is not None:
@@ -219,20 +228,23 @@ class Selfstats:
                 q = make_period(q, self.args['limit'], '--limit', start, startprop)
 
         q, found = self.maybe_reg_filter(q, 'process', 'process(es)', models.Process, 'name', prop.process_id)
-        if not found: return None
+        if not found:
+            return None
 
         q, found = self.maybe_reg_filter(q, 'title', 'title(s)', models.Window, 'title', prop.window_id)
-        if not found: return None
+        if not found:
+            return None
 
         return q
 
     def filter_keys(self):
         q = self.filter_prop(models.Keys, models.Keys.started)
-        if q is None: return
+        if q is None:
+            return
 
         if self.args['min_keys'] is not None:
             q = q.filter(Keys.nrkeys >= self.args['min_keys'])
-        
+
         if self.args['body']:
             try:
                 bodrex = re.compile(self.args['body'], re.I)
@@ -246,11 +258,12 @@ class Selfstats:
         else:
             for x in q:
                 yield x
-        
+
     def filter_clicks(self):
         self.inmouse = True
         q = self.filter_prop(models.Click, models.Click.created_at)
-        if q is None: return
+        if q is None:
+            return
 
         for x in q:
             yield x
@@ -266,7 +279,7 @@ class Selfstats:
 
         for row in fkeys:
             rows += 1
-            print row.id, row.started, pretty_seconds((row.created_at - row.started).total_seconds()), row.process.name, '"%s"'%row.window.title, row.nrkeys,
+            print row.id, row.started, pretty_seconds((row.created_at - row.started).total_seconds()), row.process.name, '"%s"' % row.window.title, row.nrkeys,
             if self.args['showtext']:
                 print row.decrypt_text()
             else:
@@ -280,11 +293,11 @@ class Selfstats:
                     d1[sub] = {}
                 d1 = d1[sub]
 
-            for key,val in d2.items():
+            for key, val in d2.items():
                 if key not in d1:
                     d1[key] = 0
                 d1[key] += val
-                
+
             if self.need_activity:
                 if 'activity' not in d1:
                     d1['activity'] = Period(self.need_activity)
@@ -296,7 +309,7 @@ class Selfstats:
         timings = []
         keys = Counter()
         for row in self.filter_keys():
-            d = {'nr':1, 'keystrokes':row.nrkeys}
+            d = {'nr': 1, 'keystrokes': row.nrkeys}
 
             if self.need_activity:
                 timings = create_times(row)
@@ -310,10 +323,10 @@ class Selfstats:
                 keys.update(row.decrypt_keys())
 
         for click in self.filter_clicks():
-            d = {'noscroll_clicks' : click.button not in [4,5],
-                 'clicks' : 1,
-                 'button%d'%click.button : 1,
-                 'mousings' : click.nrmoves}
+            d = {'noscroll_clicks': click.button not in [4, 5],
+                 'clicks': 1,
+                 'button%d' % click.button: 1,
+                 'mousings': click.nrmoves}
             if self.need_activity:
                 timings = [time.mktime(click.created_at.timetuple())]
             if self.need_process:
@@ -321,13 +334,12 @@ class Selfstats:
             if self.need_window:
                 updict(windows, d, timings, sub=click.window.title)
             updict(sumd, d, timings)
-        
+
         self.processes = processes
         self.windows = windows
         self.summary = sumd
         if self.args['key_freqs']:
             self.summary['key_freqs'] = keys
-
 
     def show_summary(self):
         print '%d keystrokes in %d key sequences,' % (self.summary.get('keystrokes', 0), self.summary.get('nr', 0)),
@@ -337,28 +349,30 @@ class Selfstats:
 
         if self.need_activity:
             act = self.summary.get('activity')
-            if act: act = act.calc_total()
-            else: act = 0
-            print 'Total time active:', 
+            if act:
+                act = act.calc_total()
+            else:
+                act = 0
+            print 'Total time active:',
             print pretty_seconds(act)
             print
 
         if self.args['clicks']:
             print 'Mouse clicks:'
-            for key,name in BUTTON_MAP:
+            for key, name in BUTTON_MAP:
                 print self.summary.get(key, 0), name
             print
 
         if self.args['key_freqs']:
             print 'Key frequencies:'
-            for key,val in self.summary['key_freqs'].most_common():
+            for key, val in self.summary['key_freqs'].most_common():
                 print key, val
             print
 
         if self.args['pkeys']:
             print 'Processes sorted by keystrokes:'
             pdata = self.processes.items()
-            pdata.sort(key=lambda x:x[1]['keystrokes'], reverse=True)
+            pdata.sort(key=lambda x: x[1]['keystrokes'], reverse=True)
             for name, data in pdata:
                 print name, data['keystrokes']
             print
@@ -366,7 +380,7 @@ class Selfstats:
         if self.args['tkeys']:
             print 'Window titles sorted by keystrokes:'
             wdata = self.windows.items()
-            wdata.sort(key=lambda x:x[1]['keystrokes'], reverse=True)
+            wdata.sort(key=lambda x: x[1]['keystrokes'], reverse=True)
             for name, data in wdata:
                 print name, data['keystrokes']
             print
@@ -376,7 +390,7 @@ class Selfstats:
             for p in self.processes.values():
                 p['active_time'] = int(p['activity'].calc_total())
             pdata = self.processes.items()
-            pdata.sort(key=lambda x:x[1]['active_time'], reverse=True)
+            pdata.sort(key=lambda x: x[1]['active_time'], reverse=True)
             for name, data in pdata:
                 print '%s, %s' % (name, pretty_seconds(data['active_time']))
             print
@@ -386,14 +400,14 @@ class Selfstats:
             for w in self.windows.values():
                 w['active_time'] = int(w['activity'].calc_total())
             wdata = self.windows.items()
-            wdata.sort(key=lambda x:x[1]['active_time'], reverse=True)
+            wdata.sort(key=lambda x: x[1]['active_time'], reverse=True)
             for name, data in wdata:
                 print '%s, %s' % (name, pretty_seconds(data['active_time']))
             print
-        
+
         if self.args['periods']:
             print 'Active periods:'
-            for t1,t2 in self.summary['activity'].times:
+            for t1, t2 in self.summary['activity'].times:
                 d1 = datetime.datetime.fromtimestamp(t1)
                 d2 = datetime.datetime.fromtimestamp(t2)
                 print '%s - %s' % (d1.isoformat(' '), str(d2.time()).split('.')[0])
@@ -412,7 +426,7 @@ class Selfstats:
             print 'Mouse movements / Keys: %.1f' % (mousings / keys)
             print 'Mouse movements / Clicks: %.1f' % (mousings / clicks)
             print
-            
+
 
 def parse_config():
     conf_parser = argparse.ArgumentParser(description=__doc__, add_help=False,
@@ -449,7 +463,7 @@ def parse_config():
     parser.add_argument('-T', '--title', type=str, metavar='regexp', help='Only allow entries where a search for this <regexp> in the window title matches something. All regular expressions are case insensitive.')
     parser.add_argument('-P', '--process', type=str, metavar='regexp', help='Only allow entries where a search for this <regexp> in the process matches something.')
     parser.add_argument('-B', '--body', type=str, metavar='regexp', help='Only allow entries where a search for this <regexp> in the body matches something. Do not use this filter when summarizing ratios or activity, as it has no effect on mouse clicks. Requires password.')
- 
+
     parser.add_argument('--clicks', action='store_true', help='Summarize number of mouse button clicks for all buttons.')
 
     parser.add_argument('--key-freqs', action='store_true', help='Summarize a table of absolute and relative number of keystrokes for each used key during the time period. Requires password.')
@@ -474,14 +488,13 @@ if __name__ == '__main__':
     args['data_dir'] = os.path.expanduser(args['data_dir'])
 
     ss = Selfstats(os.path.join(args['data_dir'], DBNAME), args)
-    
+
     if args['limit']:
         try:
             int(args['limit'][0])
         except ValueError:
             print 'First argument to --limit must be an integer'
             sys.exit(1)
-        
 
     if ss.need_text or ss.need_keys:
         if args['password'] is None:
@@ -497,4 +510,3 @@ if __name__ == '__main__':
             sys.exit(1)
 
     ss.do()
-

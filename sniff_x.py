@@ -1,20 +1,21 @@
 # This file is loosely based on examples/record_demo.py in python-xlib
 
 import sys
-import os
-import re
-import time
-import threading
 
 from Xlib import X, XK, display
 from Xlib.ext import record
 from Xlib.protocol import rq
 
-def state_to_idx(state): #this could be a dict, but I might want to extend it.
-    if state == 1: return 1
-    if state == 128: return 4
-    if state == 129: return 5
+
+def state_to_idx(state):  # this could be a dict, but I might want to extend it.
+    if state == 1:
+        return 1
+    if state == 128:
+        return 4
+    if state == 129:
+        return 5
     return 0
+
 
 class SniffX:
     def __init__(self):
@@ -22,17 +23,17 @@ class SniffX:
         for name in dir(XK):
             if name.startswith("XK_"):
                 self.keysymdict[getattr(XK, name)] = name[3:]
-        
+
         self.key_hook = lambda x: True
         self.mouse_button_hook = lambda x: True
         self.mouse_move_hook = lambda x: True
 
-        self.contextEventMask = [X.KeyPress, X.MotionNotify] #X.MappingNotify?
-        
+        self.contextEventMask = [X.KeyPress, X.MotionNotify]  # X.MappingNotify?
+
         self.the_display = display.Display()
         self.record_display = display.Display()
         self.keymap = self.the_display._keymap_codes
-        
+
     def run(self):
         # Check if the extension is present
         if not self.record_display.has_extension("RECORD"):
@@ -42,20 +43,18 @@ class SniffX:
             print "RECORD extension present"
 
         # Create a recording context; we only want key and mouse events
-        self.ctx = self.record_display.record_create_context(
-                0,
-                [record.AllClients],
-                [{
-                        'core_requests': (0, 0),
-                        'core_replies': (0, 0),
-                        'ext_requests': (0, 0, 0, 0),
-                        'ext_replies': (0, 0, 0, 0),
-                        'delivered_events': (0, 0),
-                        'device_events': tuple(self.contextEventMask),
-                        'errors': (0, 0),
-                        'client_started': False,
-                        'client_died': False,
-                }])
+        recording_context = {
+            'core_requests': (0, 0),
+            'core_replies': (0, 0),
+            'ext_requests': (0, 0, 0, 0),
+            'ext_replies': (0, 0, 0, 0),
+            'delivered_events': (0, 0),
+            'device_events': tuple(self.contextEventMask),
+            'errors': (0, 0),
+            'client_started': False,
+            'client_died': False,
+        }
+        self.ctx = self.record_display.record_create_context(0, [record.AllClients], [recording_context])
 
         # Enable the context; this only returns after a call to record_disable_context,
         # while calling the callback function in the meantime
@@ -66,7 +65,7 @@ class SniffX:
     def cancel(self):
         self.the_display.record_disable_context(self.ctx)
         self.the_display.flush()
-    
+
     def processevents(self, reply):
         if reply.category != record.FromServer:
             return
@@ -90,19 +89,18 @@ class SniffX:
                 newkeymap = self.the_display._keymap_codes
                 print 'Change keymap!', newkeymap == self.keymap
                 self.keymap = newkeymap
-                
 
     def get_key_name(self, keycode, state):
         state_idx = state_to_idx(state)
         cn = self.keymap[keycode][state_idx]
         if cn < 256:
-            return chr(cn).decode('latin1')#.encode('utf8')
+            return chr(cn).decode('latin1')  # .encode('utf8')
         else:
             return self.lookup_keysym(cn)
 
     def key_event(self, event):
         return event.detail, event.state, self.get_key_name(event.detail, event.state), event.type == X.KeyPress, event.sequence_number == 1
-    
+
     def button_event(self, event):
         return event.detail, event.type == X.ButtonPress
 
@@ -110,7 +108,3 @@ class SniffX:
         if keysym in self.keysymdict:
             return self.keysymdict[keysym]
         return "[%d]" % keysym
-
-    
-
-
